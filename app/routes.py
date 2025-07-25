@@ -1,21 +1,15 @@
-# app/routes.py
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, send_file
 from app import db
 from app.models import StudyLog
 from datetime import datetime
-
 import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.rcParams['font.family'] = 'MS Gothic'  # ← 日本語フォント指定（Windows）
-
 import io
 import base64
+import csv
 from collections import defaultdict
 
-# Blueprint定義
 main = Blueprint('main', __name__)
 
-# トップページ（記録入力・一覧表示）
 @main.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -37,12 +31,11 @@ def index():
     logs = StudyLog.query.order_by(StudyLog.date.desc()).all()
     return render_template("index.html", logs=logs)
 
-# グラフ表示ページ
 @main.route("/graph")
 def show_graph():
     logs = StudyLog.query.all()
 
-    # 日付ごとの学習時間を集計
+    # 日別に学習時間を集計
     daily_totals = defaultdict(float)
     for log in logs:
         daily_totals[log.date] += log.study_time
@@ -50,7 +43,6 @@ def show_graph():
     dates = sorted(daily_totals.keys())
     hours = [daily_totals[d] for d in dates]
 
-    # グラフ生成
     plt.figure(figsize=(8, 4))
     plt.plot(dates, hours, marker='o')
     plt.title("日別学習時間")
@@ -58,10 +50,35 @@ def show_graph():
     plt.ylabel("学習時間 (h)")
     plt.tight_layout()
 
-    # 画像をBase64に変換してHTMLに埋め込む
     img = io.BytesIO()
     plt.savefig(img, format='png')
     img.seek(0)
     plot_data = base64.b64encode(img.getvalue()).decode()
 
     return render_template("graph.html", plot_url=plot_data)
+
+@main.route("/download_csv")
+def download_csv():
+    logs = StudyLog.query.order_by(StudyLog.date.desc()).all()
+
+    si = io.StringIO()
+    writer = csv.writer(si)
+    writer.writerow(["教科", "学習時間(h)", "日付", "メモ"])
+    for log in logs:
+        writer.writerow([log.subject, log.study_time, log.date.strftime("%Y-%m-%d"), log.note])
+
+    output = io.BytesIO()
+    output.write(si.getvalue().encode('utf-8'))
+    output.seek(0)
+
+    return send_file(output,
+                     mimetype='text/csv',
+                     as_attachment=True,
+                     download_name='study_logs.csv')
+
+@main.route("/delete/<int:log_id>", methods=["POST"])
+def delete_log(log_id):
+    log = StudyLog.query.get_or_404(log_id)
+    db.session.delete(log)
+    db.session.commit()
+    return redirect(url_for("main.index"))

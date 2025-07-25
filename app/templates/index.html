@@ -1,63 +1,67 @@
-<!-- app/templates/index.html -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <title>Study Tracker</title>
-    <!-- Bootstrap読み込み -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-dark bg-primary mb-4">
-        <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">📘 Study Tracker</span>
+<nav class="navbar navbar-dark bg-primary mb-4">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">📘 Study Tracker</span>
+        <div>
+            <a href="{{ url_for('main.download_csv') }}" class="btn btn-success me-2">⬇️ CSVでダウンロード</a>
             <a href="{{ url_for('main.show_graph') }}" class="btn btn-light">📊 グラフを見る</a>
         </div>
-    </nav>
-
-    <div class="container">
-
-        <div class="card mb-4">
-            <div class="card-header">📝 学習記録フォーム</div>
-            <div class="card-body">
-                <form method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">教科:</label>
-                        <input type="text" name="subject" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">学習時間 (h):</label>
-                        <input type="number" name="study_time" class="form-control" step="0.1" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">日付:</label>
-                        <input type="date" name="date" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">メモ:</label>
-                        <textarea name="note" class="form-control" rows="2"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">保存</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">📋 学習記録一覧</div>
-            <ul class="list-group list-group-flush">
-                {% for log in logs %}
-                    <li class="list-group-item">
-                        <strong>{{ log.date }}</strong> - {{ log.subject }} - {{ log.study_time }}時間<br>
-                        <small class="text-muted">{{ log.note }}</small>
-                    </li>
-                {% else %}
-                    <li class="list-group-item">記録はまだありません</li>
-                {% endfor %}
-            </ul>
-        </div>
-
     </div>
+</nav>
+
+<div class="container">
+    <div class="card mb-4">
+        <div class="card-header">📝 学習記録フォーム</div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">教科:</label>
+                    <input type="text" name="subject" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">学習時間 (h):</label>
+                    <input type="number" name="study_time" step="0.1" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">日付:</label>
+                    <input type="date" name="date" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">メモ:</label>
+                    <textarea name="note" class="form-control"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </form>
+        </div>
+    </div>
+
+    <h3>📚 学習記録</h3>
+    {% if logs %}
+        <ul class="list-group">
+            {% for log in logs %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ log.date.strftime("%Y-%m-%d") }}</strong> - {{ log.subject }}: {{ log.study_time }}h
+                        <br><small>{{ log.note }}</small>
+                    </div>
+                    <form action="{{ url_for('main.delete_log', log_id=log.id) }}" method="post" onsubmit="return confirm('本当に削除しますか？');">
+                        <button type="submit" class="btn btn-danger btn-sm">削除</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted">記録はまだありません。</p>
+    {% endif %}
+</div>
 
 </body>
 </html>
